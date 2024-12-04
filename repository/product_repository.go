@@ -3,34 +3,50 @@ package repository
 import (
 	"errors"
 	"go-store/model"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-// InMemoryProductRepository implements a simple in-memory data storage for products.
-type InMemoryProductRepository struct {
-	products []model.Product
+// ProductRepository handles database operations for products.
+type ProductRepository struct {
+	db *gorm.DB
 }
 
-// NewInMemoryProductRepository initializes the repository with sample data.
-func NewInMemoryProductRepository() *InMemoryProductRepository {
-	return &InMemoryProductRepository{
-		products: []model.Product{
-			{ID: 1, Name: "Product A"},
-			{ID: 2, Name: "Product B"},
-		},
+// NewProductRepository initializes the repository and sets up the database.
+func NewProductRepository() *ProductRepository {
+	// Connect to SQLite database
+	db, err := gorm.Open(sqlite.Open("products.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
 	}
-}
 
-// GetAllProducts retrieves all products.
-func (repo *InMemoryProductRepository) GetAllProducts() []model.Product {
-	return repo.products
-}
-
-// GetProductByID retrieves a product by its ID or returns an error if not found.
-func (repo *InMemoryProductRepository) GetProductByID(id int) (*model.Product, error) {
-	for _, product := range repo.products {
-		if product.ID == id {
-			return &product, nil
-		}
+	// Auto-migrate the Product model
+	err = db.AutoMigrate(&model.Product{})
+	if err != nil {
+		panic("failed to migrate database")
 	}
-	return nil, errors.New("product not found")
+
+	return &ProductRepository{db: db}
+}
+
+// SaveProduct saves a product to the database.
+func (repo *ProductRepository) SaveProduct(product *model.Product) error {
+	return repo.db.Create(product).Error
+}
+
+// GetAllProducts retrieves all products from the database.
+func (repo *ProductRepository) GetAllProducts() ([]model.Product, error) {
+	var products []model.Product
+	err := repo.db.Find(&products).Error
+	return products, err
+}
+
+// GetProductByID retrieves a product by its ID.
+func (repo *ProductRepository) GetProductByID(id uint) (*model.Product, error) {
+	var product model.Product
+	err := repo.db.First(&product, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &product, err
 }

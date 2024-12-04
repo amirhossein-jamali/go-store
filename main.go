@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Initialize the repository
-	repo := repository.NewInMemoryProductRepository()
+	repo := repository.NewProductRepository()
 
 	// Initialize the controller
 	productController := controller.NewProductController(repo)
