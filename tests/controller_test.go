@@ -33,7 +33,7 @@ func setupTestRouter(mockRepo *mocks.ProductRepository) *gin.Engine {
 func TestAPI_CreateProduct_Success(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	mockRepo.On("SaveProduct", mock.Anything).Return(nil)
 
 	router := setupTestRouter(mockRepo)
@@ -53,17 +53,14 @@ func TestAPI_CreateProduct_Success(t *testing.T) {
 	assert.Equal(t, "Product created successfully", response["message"], "Response message mismatch")
 	product := response["product"].(map[string]interface{})
 	assert.Equal(t, "Test Product", product["name"], "Product name mismatch")
-
-	mockRepo.AssertExpectations(t)
 }
 
 func TestAPI_CreateProduct_InvalidRequest(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	router := setupTestRouter(mockRepo)
 
-	// Invalid JSON request
 	reqBody := `{"invalid_field": "Invalid"}`
 	req := httptest.NewRequest("POST", "/products", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -77,7 +74,7 @@ func TestAPI_CreateProduct_InvalidRequest(t *testing.T) {
 func TestAPI_GetProducts_Success(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	mockRepo.On("GetAllProducts").Return([]model.Product{
 		{Name: "Product A"},
 		{Name: "Product B"},
@@ -102,7 +99,7 @@ func TestAPI_GetProducts_Success(t *testing.T) {
 func TestAPI_GetProducts_EmptyList(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	mockRepo.On("GetAllProducts").Return([]model.Product{}, nil)
 
 	router := setupTestRouter(mockRepo)
@@ -122,7 +119,7 @@ func TestAPI_GetProducts_EmptyList(t *testing.T) {
 func TestAPI_GetProductByID_Success(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	mockRepo.On("GetProductByID", uint(1)).Return(&model.Product{Name: "Product A"}, nil)
 
 	router := setupTestRouter(mockRepo)
@@ -142,7 +139,7 @@ func TestAPI_GetProductByID_Success(t *testing.T) {
 func TestAPI_GetProductByID_NotFound(t *testing.T) {
 	t.Parallel()
 
-	mockRepo := new(mocks.ProductRepository)
+	mockRepo := mocks.NewProductRepository(t)
 	mockRepo.On("GetProductByID", uint(999)).Return(nil, nil)
 
 	router := setupTestRouter(mockRepo)
@@ -152,4 +149,19 @@ func TestAPI_GetProductByID_NotFound(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusNotFound, resp.Code, "Response code should be 404 Not Found")
+}
+
+func TestAPI_GetProductByID_Error(t *testing.T) {
+	t.Parallel()
+
+	mockRepo := mocks.NewProductRepository(t)
+	mockRepo.On("GetProductByID", uint(999)).Return(nil, mock.Anything)
+
+	router := setupTestRouter(mockRepo)
+
+	req := httptest.NewRequest("GET", "/products/999", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code, "Response code should be 500 Internal Server Error")
 }
