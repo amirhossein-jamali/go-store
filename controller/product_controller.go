@@ -1,41 +1,36 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"go-store/model"
 	"go-store/repository"
 	"net/http"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
 )
 
-// ProductController handles product-related requests.
+// ProductController handles API requests for products.
 type ProductController struct {
-	repo *repository.ProductRepository
+	repo repository.ProductRepository
 }
 
-// NewProductController creates a new instance of ProductController.
-func NewProductController(repo *repository.ProductRepository) *ProductController {
+// NewProductController initializes the controller.
+func NewProductController(repo repository.ProductRepository) *ProductController {
 	return &ProductController{repo: repo}
 }
 
-// CreateProduct handles the creation of a new product.
 func (pc *ProductController) CreateProduct(c *gin.Context) {
 	var input model.Product
 
-	// Parse and bind JSON input
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	// Validate the product
 	if err := input.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Save the product to the database
 	if err := pc.repo.SaveProduct(&input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save product"})
 		return
@@ -43,8 +38,6 @@ func (pc *ProductController) CreateProduct(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Product created successfully", "product": input})
 }
-
-// GetProducts retrieves all products.
 func (pc *ProductController) GetProducts(c *gin.Context) {
 	products, err := pc.repo.GetAllProducts()
 	if err != nil {
@@ -55,7 +48,6 @@ func (pc *ProductController) GetProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
-// GetProductByID retrieves a product by ID.
 func (pc *ProductController) GetProductByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

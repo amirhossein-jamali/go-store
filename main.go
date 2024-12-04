@@ -5,17 +5,25 @@ import (
 	"go-store/controller"
 	"go-store/repository"
 	"go-store/router"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"log"
 )
 
 func main() {
-	// Initialize the repository
-	repo := repository.NewProductRepository()
+	// Initialize SQLite database
+	db, err := gorm.Open(sqlite.Open("products.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect database: %v", err)
+	}
 
-	// Initialize the controller
+	// Initialize repository
+	repo := repository.NewGormProductRepository(db)
+
+	// Initialize controller
 	productController := controller.NewProductController(repo)
 
-	// Initialize the router
+	// Initialize router
 	r := router.NewRouter(productController)
 
 	// Start the server
